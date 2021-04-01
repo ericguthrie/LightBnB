@@ -87,7 +87,7 @@ exports.addUser = addUser;
 // Add RETURNING *; to the end of an INSERT query to return the objects that were inserted. 
 // This is handy when you need the auto generated id of an object you've just added to the database.
 
-/// Reservations
+/// Reservations!
 
 /**
  * Get all reservations for a single user.
@@ -95,9 +95,55 @@ exports.addUser = addUser;
  * @return {Promise<[{}]>} A promise to the reservations.
  */
 const getAllReservations = function (guest_id, limit = 10) {
-  return getAllProperties(null, 2);
+    return (pool.query(
+      `SELECT *, avg(rating) as average_rating
+      FROM reservations INNER JOIN properties ON reservations.property_id = properties.id INNER JOIN property_reviews ON property_reviews.property_id = properties.id 
+      WHERE reservations.guest_id = $1
+      GROUP BY reservations.id, properties.id, property_reviews.id
+      LIMIT $2
+      `, [guest_id, limit]).then(res => res.rows)
+    )
 }
 exports.getAllReservations = getAllReservations;
+
+// CREATE TABLE property_reviews (
+//   id SERIAL PRIMARY KEY NOT NULL,
+//   guest_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+//   property_id INTEGER REFERENCES properties(id) ON DELETE CASCADE,
+//   reservation_id INTEGER REFERENCES reservations(id) ON DELETE CASCADE,
+//   rating SMALLINT NOT NULL DEFAULT 0,
+//   message TEXT
+// );
+
+// CREATE TABLE properties (
+//   id SERIAL PRIMARY KEY NOT NULL,
+//   owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+
+//   title VARCHAR(255) NOT NULL,
+//   description TEXT,
+//   thumbnail_photo_url VARCHAR(255) NOT NULL,
+//   cover_photo_url VARCHAR(255) NOT NULL,
+//   cost_per_night INTEGER  NOT NULL DEFAULT 0,
+//   parking_spaces INTEGER  NOT NULL DEFAULT 0,
+//   number_of_bathrooms INTEGER  NOT NULL DEFAULT 0,
+//   number_of_bedrooms INTEGER  NOT NULL DEFAULT 0,
+
+//   country VARCHAR(255) NOT NULL,
+//   street VARCHAR(255) NOT NULL,
+//   city VARCHAR(255) NOT NULL,
+//   province VARCHAR(255) NOT NULL,
+//   post_code VARCHAR(255) NOT NULL,
+
+//   active BOOLEAN NOT NULL DEFAULT TRUE
+// );
+
+// CREATE TABLE reservations (
+//   id SERIAL PRIMARY KEY NOT NULL,asdfsd
+//   start_date DATE NOT NULL,
+//   end_date DATE NOT NULL,
+//   property_id INTEGER REFERENCES properties(id) ON DELETE CASCADE,
+//   guest_id INTEGER REFERENCES users(id) ON DELETE CASCADE
+// );
 
 /// Properties
 
