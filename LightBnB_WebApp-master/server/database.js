@@ -16,19 +16,7 @@ const pool = new Pool({
  * @param {String} email The email of the user.
  * @return {Promise<{}>} A promise to the user.
  */
-// const getUserWithEmail = function (email) {
-//   let user;
-//   for (const userId in users) {
-//     user = users[userId];
-//     if (user.email.toLowerCase() === email.toLowerCase()) {
-//       break;
-//     } else {
-//       user = null;
-//     }
-//   }
-//   return Promise.resolve(user);
-// }
-// exports.getUserWithEmail = getUserWithEmail;
+
 
 const getUserWithEmail = function (email) {
   return Promise.resolve(pool.query(`
@@ -61,13 +49,6 @@ exports.getUserWithId = getUserWithId;
  * @param {{name: string, password: string, email: string}} user
  * @return {Promise<{}>} A promise to the user.
  */
-// const addUser = function (user) {
-//   const userId = Object.keys(users).length + 1;
-//   user.id = userId;
-//   users[userId] = user;
-//   return Promise.resolve(user);
-// }
-// exports.addUser = addUser;
 
 const addUser = function (user) {
   return (pool.query(
@@ -79,13 +60,6 @@ const addUser = function (user) {
 }
 exports.addUser = addUser;
 
-// addUser
-// Accepts a user object that will have a name, email, and hashed password property.
-// This function should insert the new user into the database.
-// It will return a promise that resolves with the new user object. 
-// This object should contain the user's id after it's been added to the database.
-// Add RETURNING *; to the end of an INSERT query to return the objects that were inserted. 
-// This is handy when you need the auto generated id of an object you've just added to the database.
 
 /// Reservations!
 
@@ -153,18 +127,56 @@ exports.getAllReservations = getAllReservations;
  * @param {*} limit The number of results to return.
  * @return {Promise<[{}]>}  A promise to the properties.
  */
-// const getAllProperties = function(options, limit = 10) {
-//   const limitedProperties = {};
-//   for (let i = 1; i <= limit; i++) {
-//     limitedProperties[i] = properties[i];
-//   }
-const getAllProperties = function(options, limit = 10) {
-  const queryString = `SELECT *
-    FROM properties
-    LIMIT $1`;
-  return pool.query(queryString, [limit])
-  .then(res => res.rows)
-  .catch(err => console.error(err));
+
+ const getAllProperties = function(options, limit = 10) {
+  // 1
+  const queryParams = [];
+  // 2
+  let queryString = `
+  SELECT properties.*, avg(property_reviews.rating) as average_rating
+  FROM properties
+  JOIN property_reviews ON properties.id = property_id
+  WHERE TRUE
+  `;
+
+  // 3
+  if (options.city) {
+    queryParams.push(`%${options.city}%`);
+    queryString += `AND city LIKE $${queryParams.length}`;
+  }
+
+  if (options.owner_id) {
+    queryParams.push(`${options.owner_id}`);
+    queryString += `AND owner_id = $${queryParams.length} `;
+  }
+
+  if (options.minimum_price_per_night && options.maximum_price_per_night) {
+    queryParams.push(options.minimum_price_per_night*100)
+    queryParams.push(options.maximum_price_per_night*100);
+    queryString += `AND cost_per_night >= $${queryParams.length -1} AND cost_per_night <= $${queryParams.length} `
+    console.log("what is this?", queryParams)
+    console.log("what is this?", queryParams.length);;
+  }
+
+  if (options.minimum_rating) {
+    queryParams.push(`${options.minimum_rating}`);
+    queryString += `AND property_reviews.rating >= $${queryParams.length} `;
+  }
+
+  // 4
+  queryParams.push(limit);
+  queryString += `
+  GROUP BY properties.id
+  ORDER BY cost_per_night
+  LIMIT $${queryParams.length};
+  `;
+
+  // 5
+  console.log(queryString, queryParams, "options??",options);
+
+  // 6
+  return pool.query(queryString, queryParams)
+  .then(res => res.rows);
 }
 
 exports.getAllProperties = getAllProperties;
